@@ -26,9 +26,32 @@ class ViewController: UIViewController, UIImagePickerControllerDelegate, UINavig
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         if let userPickedImage = info[UIImagePickerController.InfoKey.originalImage] as? UIImage {
             ImageView.image = userPickedImage
+            
+            guard let ciImage = CIImage(image: userPickedImage) else {fatalError("Couldn't Convert Image to CIImage")}
+            
+            processImage(image: ciImage)
         }
         
         imagePicker.dismiss(animated: true, completion: nil)
+    }
+    
+    func processImage(image: CIImage){
+        
+        guard let model = try? VNCoreMLModel(for: Inceptionv3().model) else{ fatalError("Could not access VNCoreMLModel") }
+        
+        let request = VNCoreMLRequest(model: model) { (request, error) in
+            guard let results = request.results as? [VNClassificationObservation] else {fatalError("Could not cast results as VNClassificationObservation")}
+            print(results)
+        }
+        
+        let handler = VNImageRequestHandler(ciImage: image)
+        
+        do {
+            try handler.perform([request])
+        }
+        catch{
+            print("Could not perform request on image classification")
+        }
     }
     
     @IBAction func CameraTapped(_ sender: Any) {
